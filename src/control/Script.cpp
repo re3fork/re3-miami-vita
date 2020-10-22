@@ -31,7 +31,6 @@
 #include "GameLogic.h"
 #include "Garages.h"
 #include "General.h"
-#include "Glass.h"
 #ifdef MISSION_REPLAY
 #include "GenericGameStorage.h"
 #endif
@@ -1705,7 +1704,7 @@ static void PossiblyWakeThisEntity(CPhysical* pEntity, bool ifColLoaded = false)
 		return;
 	if (!ifColLoaded || CColStore::HasCollisionLoaded(pEntity->GetPosition())) {
 		pEntity->bIsStaticWaitingForCollision = false;
-		if (!pEntity->GetIsStatic())
+		if (!pEntity->IsStatic())
 			pEntity->AddToMovingList();
 	}
 }
@@ -1805,8 +1804,9 @@ void CMissionCleanup::Process()
 	if (!CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle)
 		TheCamera.Restore();
 	TheCamera.SetWideScreenOff();
-	CSpecialFX::bLiftCam = false;
-	CSpecialFX::bVideoCam = false;
+	// TODO(MIAMI)
+	//CSpecialFX::bLiftCam = false;
+	//CSpecialFX::bVideoCam = false;
 	CTimeCycle::StopExtraColour(0);
 	for (int i = 0; i < MISSION_AUDIO_SLOTS; i++)
 		DMAudio.ClearMissionAudio(i);
@@ -3973,7 +3973,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		if (pos.z <= MAP_Z_LOW_LIMIT)
 			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
 		pos.z += car->GetDistanceFromCentreOfMassToBaseOfModel();
-		car->SetIsStatic(false);
+		car->bIsStatic = false;
 		/* Again weird usage of virtual functions. */
 		if (car->IsBoat()) {
 			car->Teleport(pos);
@@ -4126,7 +4126,6 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		CMessages::AddMessageJumpQ(key, ScriptParams[0], ScriptParams[1]);
 		return 0;
 	}
-	/*
 	case COMMAND_PRINT_SOON:
 	{
 		wchar* key = CTheScripts::GetTextByKeyFromScript(&m_nIp);
@@ -4134,7 +4133,6 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		CMessages::AddMessageSoon(key, ScriptParams[0], ScriptParams[1]);
 		return 0;
 	}
-	*/
 	case COMMAND_CLEAR_PRINTS:
 		CMessages::ClearMessages();
 		return 0;
@@ -9651,13 +9649,13 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		script_assert(pObject);
 		if (ScriptParams[1]) {
 			if (pObject->bIsStatic) {
-				pObject->SetIsStatic(false);
+				pObject->bIsStatic = false;
 				pObject->AddToMovingList();
 			}
 		}
 		else {
 			if (!pObject->bIsStatic) {
-				pObject->SetIsStatic(true);
+				pObject->bIsStatic = true;
 				pObject->RemoveFromMovingList();
 			}
 		}
@@ -12406,7 +12404,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_SWITCH_SECURITY_CAMERA:
 	{
 		CollectParameters(&m_nIp, 1);
-		CSpecialFX::bVideoCam = ScriptParams[0] != 0;
+		debug("SWITCH_SECURITY_CAMERA is not implemented\n"); // TODO(MIAMI)
 		return 0;
 	}
 	//case COMMAND_IS_CHAR_IN_FLYING_VEHICLE:
@@ -12846,7 +12844,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_SWITCH_LIFT_CAMERA:
 	{
 		CollectParameters(&m_nIp, 1);
-		CSpecialFX::bLiftCam = ScriptParams[0] != 0;
+		debug("SWITCH_LIFT_CAMERA is not implemented\n"); // TODO(MIAMI)
 		return 0;
 	}
 	case COMMAND_CLOSE_ALL_CAR_DOORS:
@@ -13015,12 +13013,12 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_HAS_GLASS_BEEN_SHATTERED_NEARBY:
 	{
 		CollectParameters(&m_nIp, 3);
-		
-		bool shattered = false;
-		if ( CGlass::HasGlassBeenShatteredAtCoors(*(float*)&ScriptParams[0], *(float*)&ScriptParams[1], *(float*)&ScriptParams[2]) )
-			shattered = true;
-		
-		UpdateCompareFlag(shattered);
+		static bool bShowed = false;
+		if (!bShowed) {
+			debug("HAS_GLASS_BEEN_SHATTERED_NEARBY not implemented, default to TRUE\n"); // TODO(MIAMI)
+			bShowed = true;
+		}
+		UpdateCompareFlag(true);
 		return 0;
 	}
 	case COMMAND_ATTACH_CUTSCENE_OBJECT_TO_BONE:
@@ -13729,7 +13727,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 			pVehicle->bDontLoadCollision = true;
 			if (pVehicle->bIsStaticWaitingForCollision) {
 				pVehicle->bIsStaticWaitingForCollision = false;
-				if (!pVehicle->GetIsStatic())
+				if (!pVehicle->IsStatic())
 					pVehicle->AddToMovingList();
 			}
 		}
@@ -13752,7 +13750,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 			pPed->bDontLoadCollision = true;
 			if (pPed->bIsStaticWaitingForCollision) {
 				pPed->bIsStaticWaitingForCollision = false;
-				if (!pPed->GetIsStatic())
+				if (!pPed->IsStatic())
 					pPed->AddToMovingList();
 			}
 		}

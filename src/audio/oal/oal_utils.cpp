@@ -3,6 +3,7 @@
 
 #ifdef AUDIO_OAL
 
+#ifndef __SWITCH__ // oal switch port doesn't need this apparently
 LPALGENEFFECTS alGenEffects;
 LPALDELETEEFFECTS alDeleteEffects;
 LPALISEFFECT alIsEffect;
@@ -79,6 +80,9 @@ void EFXInit()
 	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
 #undef LOAD_PROC
 }
+#else
+void EFXInit(){}
+#endif
 
 void SetEffectsLevel(ALuint uiFilter, float level)
 {

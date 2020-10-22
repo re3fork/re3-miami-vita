@@ -5,7 +5,6 @@
 #include "DMAudio.h"
 #include "Record.h"
 #include "Timer.h"
-#include "SpecialFX.h"
 
 uint32 CTimer::m_snTimeInMilliseconds;
 PauseModeTime CTimer::m_snTimeInMillisecondsPauseMode = 1;
@@ -142,7 +141,7 @@ void CTimer::Update(void)
 		}
 	}
 	
-	if ( ms_fTimeStep < 0.01f && !GetIsPaused() && !CSpecialFX::bSnapShotActive)
+	if ( ms_fTimeStep < 0.01f && !GetIsPaused() )
 		ms_fTimeStep = 0.01f;
 
 	ms_fTimeStepNonClipped = ms_fTimeStep;

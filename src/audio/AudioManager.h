@@ -76,8 +76,6 @@ public:
 	uint8 m_nIndexMap[NUM_PED_COMMENTS_BANKS][NUM_PED_COMMENTS_SLOTS];
 	uint8 m_nCommentsInBank[NUM_PED_COMMENTS_BANKS];
 	uint8 m_nActiveBank;
-	bool m_bDelay;
-	uint32 m_nDelayTimer;
 
 	cPedComments()
 	{
@@ -223,6 +221,7 @@ public:
 	uint8 m_nUserPause;
 	uint8 m_nPreviousUserPause;
 	uint32 m_FrameCounter;
+	uint32 field_5554;
 
 	cAudioManager();
 	~cAudioManager();
@@ -371,7 +370,7 @@ public:
 	void ReacquireDigitalHandle() const;                                                                                              // done
 	void ReleaseDigitalHandle() const;                                                                                                // done
 	void ReportCollision(CEntity *entity1, CEntity *entity2, uint8 surface1, uint8 surface2, float collisionPower, float intensity2); // done
-	void ReportCrime(eCrimeType crime, const CVector &pos);                                                                                // done
+	void ReportCrime(int32 crime, const CVector *pos);                                                                                // done
 	void ResetAudioLogicTimers(uint32 timer);
 	void ResetPoliceRadio();
 	void ResetTimers(uint32 time);
@@ -379,7 +378,7 @@ public:
 	void Service();
 	void ServiceCollisions();
 	void ServicePoliceRadio();
-	void ServicePoliceRadioChannel(uint8 wantedLevel);
+	void ServicePoliceRadioChannel(int32 wantedLevel);
 	void ServiceSoundEffects();
 	int8 SetCurrent3DProvider(uint8 which);
 	void SetDynamicAcousticModelingStatus(uint8 status);

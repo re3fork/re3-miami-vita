@@ -26,6 +26,7 @@ public:
 	};
 	CBuilding *m_pCraneEntity;
 	CObject *m_pHook;
+	int32 m_nAudioEntity;
 	float m_fPickupX1;
 	float m_fPickupX2;
 	float m_fPickupY1;

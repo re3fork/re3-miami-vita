@@ -593,6 +593,9 @@ void re3_debug(const char *format, ...)
 	va_end(va);
 
 	printf("%s", re3_buff);
+	#ifdef __SWITCH__
+	svcOutputDebugString(re3_buff, strlen(re3_buff));
+	#endif
 	CDebug::DebugAddText(re3_buff);
 }
 
@@ -632,6 +635,9 @@ void re3_usererror(const char *format, ...)
 #else
 	vsprintf(re3_buff, format, va);
 	printf("\nRE3 Error!\n\t%s\n",re3_buff);
+	#ifdef __SWITCH__
+	svcOutputDebugString(re3_buff, strlen(re3_buff));
+	#endif
 	assert(false);
 #endif
 }

@@ -352,11 +352,13 @@ set_new_provider(int index)
 		
 		alDistanceModel(AL_INVERSE_DISTANCE_CLAMPED);
 		
+		#ifndef __SWITCH__ // crashes on switch
 		if ( alcIsExtensionPresent(ALDevice, (ALCchar*)ALC_EXT_EFX_NAME) )
 		{
 			alGenAuxiliaryEffectSlots(1, &ALEffectSlot);
 			alGenEffects(1, &ALEffect);
 		}
+		#endif
 		
 		for ( int32 i = 0; i < MAX_STREAMS; i++ )
 		{
@@ -379,6 +381,7 @@ set_new_provider(int index)
 		usingEAX3 = 0;
 		_usingEFX = false;
 		
+		#ifndef __SWITCH__ // crashes on switch
 		if ( !strcmp(&providers[index].name[strlen(providers[index].name) - strlen(" EAX3")], " EAX3") 
 				&& alcIsExtensionPresent(ALDevice, (ALCchar*)ALC_EXT_EFX_NAME) )
 		{
@@ -404,6 +407,7 @@ set_new_provider(int index)
 				DEV("EFX\n");
 			}
 		}
+		#endif
 		
 		//SampleManager.SetSpeakerConfig(speaker_type);
 				
@@ -573,7 +577,7 @@ _ResolveLink(char const *path, char *out)
 		perror("lstat: ");
 		return false;
 	}
-
+#ifndef __SWITCH__
 	if (S_ISLNK(sb.st_mode)) {
 		char* linkname = (char*)alloca(sb.st_size + 1);
 		if (linkname == NULL) {
@@ -591,6 +595,9 @@ _ResolveLink(char const *path, char *out)
 	} else {
 		return false;
 	}
+#else
+        return false;
+#endif
 #endif
 }
 

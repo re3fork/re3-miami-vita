@@ -34,23 +34,21 @@ class CPickup
 {
 public:
 	CVector m_vecPos;
-	float m_fRevenue;
+	uint32 m_nRevenue;
 	CObject *m_pObject;
 	CObject *m_pExtraObject;
-	uint32 m_nQuantity;
+	uint16 m_nQuantity;
 	uint32 m_nTimer;
-	uint16 m_nMoneySpeed;
+	int16 m_nMoneySpeed;
 	int16 m_eModelIndex;
 	uint16 m_nIndex;
 	char m_sTextKey[8];
 	ePickupType m_eType;
 	bool m_bRemoved;
-	uint8 m_effects:1;
-	uint8 m_effects2:1;
+	uint8 m_effects;
 
-	CObject *GiveUsAPickUpObject(CObject **object, CObject **extraObject, int32 handle, int32 extraHandle);
+	CObject *GiveUsAPickUpObject(int32 handle);
 	bool Update(CPlayerPed *player, CVehicle *vehicle, int playerId);
-	void GetRidOfObjects();
 private:
 	bool IsMine() { return m_eType >= PICKUP_MINE_INACTIVE && m_eType <= PICKUP_FLOATINGPACKAGE_FLOATING; }
 	inline bool CanBePickedUp(CPlayerPed *player, int playerId);
@@ -66,9 +64,8 @@ struct tPickupMessage
 	eWeaponType m_weaponType;
 	CVector2D m_dist;
 	CRGBA m_color;
-	uint8 m_bOutOfStock;
+	uint8 m_bOutOfStock : 1;
 	uint8 m_quantity;
-	uint16 money;
 };
 
 class CPickups
@@ -114,13 +111,13 @@ public:
 	static CVector StaticCamCoors;
 	static uint32 StaticCamStartTime;
 	
-	static void RemoveAllPickupsOfACertainWeaponGroupWithNoAmmo(eWeaponType);
-	static CPickup *FindPickUpForThisObject(CEntity*);
+//TODO(MIAMI)
+	static void RemoveAllPickupsOfACertainWeaponGroupWithNoAmmo(eWeaponType) {}
 };
 
-extern uint16 AmmoForWeapon[WEAPONTYPE_TOTALWEAPONS + 1];
-extern uint16 AmmoForWeapon_OnStreet[WEAPONTYPE_TOTALWEAPONS + 1];
-extern uint16 CostOfWeapon[WEAPONTYPE_TOTALWEAPONS + 3];
+extern uint16 AmmoForWeapon[20];
+extern uint16 AmmoForWeapon_OnStreet[WEAPONTYPE_TOTALWEAPONS];
+extern uint16 CostOfWeapon[20];
 
 enum ePacmanPickupType
 {

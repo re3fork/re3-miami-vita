@@ -14,7 +14,6 @@
 #include "AnimBlendClumpData.h"
 #include "AnimBlendAssociation.h"
 #include "Fire.h"
-#include "Glass.h"
 #include "DMAudio.h"
 #include "General.h"
 #include "SurfaceTable.h"
@@ -5866,7 +5865,7 @@ CPed::FightStrike(CVector &touchedNodePos, bool fightWithWeapon)
 	if (m_fightState == FIGHTSTATE_JUST_ATTACKED)
 		return false;
 	
-	CGlass::BreakGlassPhysically(touchedNodePos, radius);
+	// TODO(Miami): BreakGlassPhysically
 
 	for (int i = 0; i < m_numNearPeds; i++) {
 		int8 pedFound = 0;
@@ -15404,17 +15403,17 @@ CPed::ProcessObjective(void)
 					CVector distance = m_nextRoutePointPos - GetPosition();
 					distance.z = 0.0f;
 					if (m_objective == OBJECTIVE_GOTO_SHELTER_ON_FOOT) {
-						if (m_nMoveState == PEDMOVE_RUN && distance.MagnitudeSqr() < SQR(2.0f)) {
+						if (m_nMoveState == PEDMOVE_SPRINT && distance.Magnitude() < SQR(2.0f)) {
 							SetMoveState(PEDMOVE_WALK);
 							bIsRunning = false;
 						}
-						if (CWeather::Rain < 0.2f && m_attractor) {
+						else if (CWeather::Rain < 0.2f && m_attractor) {
 							GetPedAttractorManager()->DeRegisterPed(this, m_attractor);
 							return;
 						}
 					}
 					else if (m_objective == OBJECTIVE_GOTO_ICE_CREAM_VAN_ON_FOOT) {
-						if (m_nMoveState == PEDMOVE_RUN && distance.MagnitudeSqr() < SQR(4.0f)) {
+						if (m_nMoveState == PEDMOVE_SPRINT && distance.Magnitude() < SQR(4.0f)) {
 							SetMoveState(PEDMOVE_WALK);
 							bIsRunning = false;
 						}
@@ -15440,10 +15439,8 @@ CPed::ProcessObjective(void)
 						}
 					}
 					if (sq(m_distanceToCountSeekDone) < distance.MagnitudeSqr()) {
-						if (CTimer::GetTimeInMilliseconds() > m_nPedStateTimer || GetPedState() != PED_SEEK_POS) {
-							m_vecSeekPos = m_nextRoutePointPos;
+						if (CTimer::GetTimeInMilliseconds() > m_nPedStateTimer || GetPedState() != PED_SEEK_POS)
 							SetSeek(m_vecSeekPos, m_distanceToCountSeekDone);
-						}
 					}
 					else {
 						if (!bReachedAttractorHeadingTarget) {
@@ -15513,10 +15510,6 @@ CPed::ProcessObjective(void)
 									SetObjective(OBJECTIVE_WAIT_ON_FOOT_AT_ICE_CREAM_VAN);
 									break;
 								}
-							} else {
-								m_prevObjective = OBJECTIVE_NONE;
-								SetObjective(OBJECTIVE_WAIT_ON_FOOT);
-								m_objectiveTimer = 0;
 							}
 						}
 					}
@@ -15700,11 +15693,11 @@ CPed::ProcessObjective(void)
 				}
 				if (!pVan->m_bSirenOrAlarm) {
 					GetPedAttractorManager()->DeRegisterPed(this, m_attractor);
-					return; // Why?
+					return; // ???
 				}
 				if (pVan->GetStatus() == STATUS_WRECKED) {
 					GetPedAttractorManager()->DeRegisterPed(this, m_attractor);
-					return; // Why?
+					return; // ???
 				}
 				break;
 			}
@@ -16429,11 +16422,11 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 		if (!collidingEnt->IsBuilding())
 			((CPhysical*)collidingEnt)->AddCollisionRecord(this);
 
-		if (ourCollidedSpheres > 0 && (collidingEnt->IsBuilding() || collidingEnt->GetIsStatic())) {
+		if (ourCollidedSpheres > 0 && (collidingEnt->IsBuilding() || collidingEnt->IsStatic())) {
 			bHasHitWall = true;
 		}
 	}
-	if (collidingEnt->IsBuilding() || collidingEnt->GetIsStatic()) {
+	if (collidingEnt->IsBuilding() || collidingEnt->IsStatic()) {
 		if (bWasStanding) {
 			CVector sphereNormal;
 			float normalLength;
@@ -18415,7 +18408,7 @@ CPed::SeekCar(void)
 				{
 					m_fRotationCur = m_fRotationDest;
 					if (!bVehEnterDoorIsBlocked) {
-						vehToSeek->SetIsStatic(false);
+						vehToSeek->bIsStatic = false;
 						if (m_objective == OBJECTIVE_SOLICIT_VEHICLE) {
 							SetSolicit(1000);
 						} else if (m_objective == OBJECTIVE_BUY_ICE_CREAM) {
@@ -20041,13 +20034,15 @@ CPed::Save(uint8*& buf)
 	CopyToBuf(buf, GetPosition().z);
 	SkipSaveBuf(buf, 288);
 	CopyToBuf(buf, CharCreatedBy);
-	SkipSaveBuf(buf, 499);
+	SkipSaveBuf(buf, 351);
 	CopyToBuf(buf, m_fHealth);
 	CopyToBuf(buf, m_fArmour);
-	SkipSaveBuf(buf, 172);
-	for (int i = 0; i < 10; i++) // has to be hardcoded
+	SkipSaveBuf(buf, 148);
+	for (int i = 0; i < 13; i++) // has to be hardcoded
 		m_weapons[i].Save(buf);
-	SkipSaveBuf(buf, 252);
+	SkipSaveBuf(buf, 5);
+	CopyToBuf(buf, m_maxWeaponTypeAllowed);
+	SkipSaveBuf(buf, 162);
 }
 
 void
@@ -20059,15 +20054,16 @@ CPed::Load(uint8*& buf)
 	CopyFromBuf(buf, GetMatrix().GetPosition().z);
 	SkipSaveBuf(buf, 288);
 	CopyFromBuf(buf, CharCreatedBy);
-	SkipSaveBuf(buf, 499);
+	SkipSaveBuf(buf, 351);
 	CopyFromBuf(buf, m_fHealth);
 	CopyFromBuf(buf, m_fArmour);
-	SkipSaveBuf(buf, 172);
-	m_currentWeapon = WEAPONTYPE_UNARMED;
+	SkipSaveBuf(buf, 148);
 
 	CWeapon bufWeapon;
-	for (int i = 0; i < 10; i++) { // has to be hardcoded
+	for (int i = 0; i < 13; i++) { // has to be hardcoded
 		bufWeapon.Load(buf);
+		if (i >= 10)
+			continue; // tmp hack before we fix save/load
 
 		if (bufWeapon.m_eWeaponType != WEAPONTYPE_UNARMED) {
 			int modelId = CWeaponInfo::GetWeaponInfo(bufWeapon.m_eWeaponType)->m_nModelId;
@@ -20082,7 +20078,9 @@ CPed::Load(uint8*& buf)
 			GiveWeapon(bufWeapon.m_eWeaponType, bufWeapon.m_nAmmoTotal);
 		}
 	}
-	SkipSaveBuf(buf, 252);
+	SkipSaveBuf(buf, 5);
+	CopyFromBuf(buf, m_maxWeaponTypeAllowed);
+	SkipSaveBuf(buf, 162);
 }
 #undef CopyFromBuf
 #undef CopyToBuf

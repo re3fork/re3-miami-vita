@@ -18,6 +18,7 @@
 #endif
 
 #ifndef AUDIO_OPUS
+
 class CSndFile : public IDecoder
 {
 	SNDFILE *m_pfSound;

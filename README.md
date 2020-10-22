@@ -1,3 +1,18 @@
+# reVC-nx
+
+GTA VC decompilation ported to the Nintendo Switch
+
+## Build instructions
+- Install dependencies: `pacman -S switch-mpg123 switch-sdl2 switch-glfw switch-libdrm_nouveau`
+- Install switch port of [OpenAL-Soft](https://github.com/fgsfdsfgs/openal-soft)
+- Build the [librw switch port](https://github.com/AGraber/librw) and place static libraries in devkitPro/portlibs/switch/lib
+- Build [libsndfile](https://github.com/libsndfile/libsndfile) and place libraries and headers to devkitPro/portlibs/switch
+
+## Downloads:
+Check [releases](https://github.com/Flex1911/re3/releases)
+
+## Original README:
+
 # re3
 [![Build status](https://ci.appveyor.com/api/projects/status/hyiwgegks122h8jg/branch/master?svg=true)](https://ci.appveyor.com/project/aap/re3/branch/master)
 <a href="https://discord.gg/jYpXxTm"><img src="https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat" /></a>

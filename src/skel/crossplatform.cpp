@@ -26,39 +26,34 @@ void GetLocalTime_CP(SYSTEMTIME *out) {
 // Compatible with Linux/POSIX and MinGW on Windows
 #ifndef _WIN32
 HANDLE FindFirstFile(const char* pathname, WIN32_FIND_DATA* firstfile) {
-	char pathCopy[32];
-
-	strncpy(pathCopy, pathname, 32);
-	char* folder = strtok(pathCopy, "*");
-
+	char newpathname[32];
+	
+	strncpy(newpathname, pathname, 32);
+	char* path = strtok(newpathname, "*");
+	
 	// Case-sensitivity and backslashes...
-	char *realFolder = casepath(folder);
-	char *extension = nil;
-	if (realFolder) {
-		realFolder[strlen(realFolder)] = '*';
-		extension = strtok(NULL, "*");
-		if (extension) {
-			strcat(realFolder, extension);
-		}
-
-		strncpy(pathCopy, realFolder, 32);
-		free(realFolder);
-		folder = strtok(pathCopy, "*");
-	} else {
-		// Wildcard (*)
-		if (strlen(folder) + 1 != strlen(pathname))
-			extension = strtok(NULL, "*");
+	char *real = casepath(path);
+	if (real) {
+		real[strlen(real)] = '*';
+		char *extension = strtok(NULL, "*");
+		if (extension)
+			strcat(real, extension);
+		
+		strncpy(newpathname, real, 32);
+		free(real);
+		path = strtok(newpathname, "*");
 	}
+	
+	strncpy(firstfile->folder, path, sizeof(firstfile->folder));
 
-	strncpy(firstfile->folder, folder, sizeof(firstfile->folder));
-
-	if (extension)
-		strncpy(firstfile->extension, extension, sizeof(firstfile->extension));
+	// Both w/ extension and w/o extension is ok
+	if (strlen(path) + 1 != strlen(pathname))
+		strncpy(firstfile->extension, strtok(NULL, "*"), sizeof(firstfile->extension));
 	else
-		firstfile->extension[0] = '\0';
+		strncpy(firstfile->extension, "", sizeof(firstfile->extension));
 
 	HANDLE d;
-	if ((d = (HANDLE)opendir(folder)) == NULL || !FindNextFile(d, firstfile))
+	if ((d = (HANDLE)opendir(path)) == NULL || !FindNextFile(d, firstfile))
 		return NULL;
 
 	return d;
@@ -179,6 +174,21 @@ char* casepath(char const* path, bool checkPathFirst)
     size_t rl = 0;
 
     DIR* d;
+
+    char* c;
+    
+    #ifdef __SWITCH__
+    if( (c = strstr(p, ":/")) != NULL) // support for switch mounted device names
+    {
+        size_t deviceNameOffset = c - p + 3;
+        char* deviceNamePath = (char*)alloca(deviceNameOffset + 1);
+        strlcpy(deviceNamePath, p, deviceNameOffset);
+        deviceNamePath[deviceNameOffset] = 0;
+        d = opendir(deviceNamePath);
+        p = c + 1;
+    }
+    else
+    #endif
     if (p[0] == '/' || p[0] == '\\')
     {
         d = opendir("/");
@@ -193,7 +203,7 @@ char* casepath(char const* path, bool checkPathFirst)
 
     bool cantProceed = false; // just convert slashes in what's left in string, not case sensitivity
     bool mayBeTrailingSlash = false;
-    char* c;
+
     while (c = strsep(&p, "/\\"))
     {
         // May be trailing slash(allow), slash at the start(avoid), or multiple slashes(avoid)

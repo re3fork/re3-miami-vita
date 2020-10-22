@@ -106,12 +106,14 @@ RsInputDeviceAttach(RsInputDeviceType inputDevice,
 {
 	switch (inputDevice)
 	{
+		#ifndef __SWITCH__
 		case rsKEYBOARD:
 			{
 				RsGlobal.keyboard.inputEventHandler = inputEventHandler;
 				RsGlobal.keyboard.used = TRUE;
 				break;
 			}
+		#endif
 		case rsMOUSE:
 			{
 				RsGlobal.mouse.inputEventHandler = inputEventHandler;

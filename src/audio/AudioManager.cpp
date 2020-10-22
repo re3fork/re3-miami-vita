@@ -437,6 +437,7 @@ cAudioManager::IsAudioInitialised() const
 void
 cAudioManager::ServiceSoundEffects()
 {
+	field_5554++;
 	m_bFifthFrameFlag = (m_FrameCounter++ % 5) == 0;
 	if (m_nUserPause && !m_nPreviousUserPause) {
 		for (int32 i = 0; i < allChannels; i++)
@@ -837,7 +838,7 @@ cAudioManager::ProcessActiveQueues()
 					sample.m_nSampleIndex == m_asActiveSamples[j].m_nSampleIndex) {
 					if (sample.m_nLoopCount) {
 						
-						if (m_FrameCounter & 1) {
+						if (field_5554 & 1) {
 							if (!(j & 1)) {
 								flag = false;
 							} else {

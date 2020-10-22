@@ -823,7 +823,9 @@ PadHandler(RsEvent event, void *param)
 RwBool
 AttachInputDevices(void)
 {
+	#ifndef __SWITCH__
 	RsInputDeviceAttach(rsKEYBOARD, KeyboardHandler);
+	#endif
 
 	RsInputDeviceAttach(rsPAD, PadHandler);
 

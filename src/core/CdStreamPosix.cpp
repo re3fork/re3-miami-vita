@@ -12,7 +12,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/resource.h>
+#ifndef __SWITCH__
 #include <sys/syscall.h>
+#else
+// no signals in switch
+#define pthread_kill(threadid, signal) pthread_cancel(threadid)
+#endif
 
 #include "CdStream.h"
 #include "rwcore.h"
@@ -76,10 +81,17 @@ CdStreamInitThread(void)
 	gChannelRequestQ.tail = 0;
 	gChannelRequestQ.size = gNumChannels + 1;
 	ASSERT(gChannelRequestQ.items != nil );
+#ifndef __SWITCH__
 	gCdStreamSema = sem_open("/semaphore_cd_stream", O_CREAT, 0644, 1);
 
 
 	if (gCdStreamSema == SEM_FAILED) {
+#else
+	gCdStreamSema = (sem_t *)malloc(sizeof(sem_t));
+	status = sem_init(gCdStreamSema, 0, 0);
+
+	if (status == -1) {
+#endif
 		CDTRACE("failed to create stream semaphore");
 		ASSERT(0);
 		return;
@@ -90,20 +102,35 @@ CdStreamInitThread(void)
 	{
 		for ( int32 i = 0; i < gNumChannels; i++ )
 		{
+#ifndef __SWITCH__
 			sprintf(semName,"/semaphore_done%d",i);
 			gpReadInfo[i].pDoneSemaphore = sem_open(semName, O_CREAT, 0644, 1);
 
 			if (gpReadInfo[i].pDoneSemaphore == SEM_FAILED)
+#else
+			gpReadInfo[i].pDoneSemaphore = (sem_t *)malloc(sizeof(sem_t));
+			status = sem_init(gpReadInfo[i].pDoneSemaphore, 0, 0);
+
+			if (status == -1)
+#endif
 			{
 				CDTRACE("failed to create sync semaphore");
 				ASSERT(0);
 				return;
 			}
 #ifdef ONE_THREAD_PER_CHANNEL
+#ifndef __SWITCH__
 			sprintf(semName,"/semaphore_start%d",i);
 			gpReadInfo[i].pStartSemaphore = sem_open(semName, O_CREAT, 0644, 1);
 
 			if (gpReadInfo[i].pStartSemaphore == SEM_FAILED)
+#else
+			gpReadInfo[i].pStartSemaphore = (sem_t *)malloc(sizeof(sem_t));
+			status = sem_init(gpReadInfo[i].pStartSemaphore, 0, 0);
+
+			if (status == -1)
+#endif
+
 			{
 				CDTRACE("failed to create start semaphore");
 				ASSERT(0);
@@ -216,6 +243,7 @@ CdStreamShutdown(void)
 #ifndef ONE_THREAD_PER_CHANNEL
 	gCdStreamThreadStatus = 2;
 	sem_post(gCdStreamSema);
+	pthread_join(_gCdStreamThread, NULL);
 #else
 	for ( int32 i = 0; i < gNumChannels; i++ ) {
 		gpReadInfo[i].nThreadStatus = 2;
@@ -472,7 +500,7 @@ void *CdStreamThread(void *param)
 	if (gpReadInfo)
 		free(gpReadInfo);
 	gpReadInfo = nil;
-	pthread_exit(nil);
+	return 0;
 }
 
 bool

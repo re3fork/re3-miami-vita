@@ -70,8 +70,7 @@ public:
 	uint8 bUseVehicleColours : 1;
 	uint8 bIsWeapon : 1;
 	uint8 bIsStreetLight : 1;
-	int8 m_nBonusValue;
-	uint16 m_nCostValue;
+	int8 m_nBonusValue; 
 	float m_fCollisionDamageMultiplier;
 	uint8 m_nCollisionDamageEffect;
 	uint8 m_nSpecialCollisionResponseCases;

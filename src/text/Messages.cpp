@@ -11,8 +11,6 @@
 
 #include "Font.h"
 
-// --MIAMI: file done
-
 tMessage CMessages::BriefMessages[NUMBRIEFMESSAGES];
 tPreviousBrief CMessages::PreviousBriefs[NUMPREVIOUSBRIEFS];
 tBigMessage CMessages::BIGMessages[NUMBIGMESSAGES];
@@ -71,7 +69,10 @@ CMessages::WideStringCompare(wchar *str1, wchar *str2, uint16 size)
 	if (len1 != len2 && (len1 < size || len2 < size))
 		return false;
 
-	for (int32 i = 0; FixupChar(str1[i]) != '\0' && i < size; i++) {
+	for (int32 i = 0; i < size; i++) {
+		if (FixupChar(str1[i]) == '\0')
+			break;
+
 		if (FixupChar(str1[i]) != FixupChar(str2[i]))
 			return false;
 	}
@@ -296,7 +297,6 @@ CMessages::AddBigMessage(wchar *msg, uint32 time, uint16 style)
 	BIGMessages[style].m_Stack[0].m_nNumber[5] = -1;
 	BIGMessages[style].m_Stack[0].m_pString = nil;
 }
-
 void
 CMessages::AddBigMessageQ(wchar *msg, uint32 time, uint16 style)
 {
@@ -327,8 +327,10 @@ CMessages::AddBigMessageQ(wchar *msg, uint32 time, uint16 style)
 void
 CMessages::AddToPreviousBriefArray(wchar *text, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6, wchar *string)
 {
-	int32 i;
-	for (i = 0; PreviousBriefs[i].m_pText && i < NUMPREVIOUSBRIEFS; i++) {
+	int32 i = 0;
+	while (i < NUMPREVIOUSBRIEFS) {
+		if (PreviousBriefs[i].m_pText == nil)
+			break;
 		if (PreviousBriefs[i].m_nNumber[0] == n1
 			&& PreviousBriefs[i].m_nNumber[1] == n2
 			&& PreviousBriefs[i].m_nNumber[2] == n3
@@ -338,6 +340,8 @@ CMessages::AddToPreviousBriefArray(wchar *text, int32 n1, int32 n2, int32 n3, in
 			&& PreviousBriefs[i].m_pText == text
 			&& PreviousBriefs[i].m_pString == string)
 			return;
+
+		i++;
 	}
 
 	if (i != 0) {
@@ -370,14 +374,6 @@ CMessages::InsertNumberInString(wchar *str, int32 n1, int32 n2, int32 n3, int32 
 		return;
 	}
 
-	sprintf(numStr, "%d", n1);
-	size_t outLen = strlen(numStr);
-	AsciiToUnicode(numStr, wNumStr);
-	if (str[0] == 0) {
-		*outstr = '\0';
-		return;
-	}
-
 	int32 size = GetWideStringLength(str);
 
 	int32 i = 0;
@@ -389,20 +385,22 @@ CMessages::InsertNumberInString(wchar *str, int32 n1, int32 n2, int32 n3, int32 
 #else
 		if (str[c] == '~' && str[c + 1] == '1' && str[c + 2] == '~') {
 #endif
-			c += 3;
-			for (int j = 0; j < outLen; )
-				*(outstr++) = wNumStr[j++];
-
-			i++;
 			switch (i) {
+			case 0: sprintf(numStr, "%d", n1); break;
 			case 1: sprintf(numStr, "%d", n2); break;
 			case 2: sprintf(numStr, "%d", n3); break;
 			case 3: sprintf(numStr, "%d", n4); break;
 			case 4: sprintf(numStr, "%d", n5); break;
 			case 5: sprintf(numStr, "%d", n6); break;
 			}
-			outLen = strlen(numStr);
+			i++;
 			AsciiToUnicode(numStr, wNumStr);
+
+			int j = 0;
+			while (wNumStr[j] != '\0')
+				*(outstr++) = wNumStr[j++];
+				
+			c += 3;
 		} else {
 			*(outstr++) = str[c++];
 		}
@@ -426,9 +424,10 @@ CMessages::InsertStringInString(wchar *str1, wchar *str2)
 	for (i = 0; i < total_size; ) {
 #ifdef MORE_LANGUAGES
 		if ((CFont::IsJapanese() && *_str1 == (0x8000 | '~') && *(_str1 + 1) == (0x8000 | 'a') && *(_str1 + 2) == (0x8000 | '~'))
-			|| (*_str1 == '~' && *(_str1 + 1) == 'a' && *(_str1 + 2) == '~')) {
+			|| (*_str1 == '~' && *(_str1 + 1) == 'a' && *(_str1 + 2) == '~'))
+		{
 #else
-		if (*_str1 == '~' && *(_str1 + 1) == 'a' && *(_str1 + 2) == '~') {
+			if (*_str1 == '~' && *(_str1 + 1) == 'a' && *(_str1 + 2) == '~') {
 #endif
 			_str1 += 3;
 			for (int j = 0; j < str2_size; j++) {
@@ -467,12 +466,10 @@ CMessages::InsertPlayerControlKeysInString(wchar *str)
 		if (str[i] == '~' && str[i + 1] == 'k' && str[i + 2] == '~') {
 #endif
 			i += 4;
-			bool done = false;
-			for (int32 cont = 0; cont < MAX_CONTROLLERACTIONS && !done; cont++) {
+			for (int32 cont = 0; cont < MAX_CONTROLLERACTIONS; cont++) {
 				uint16 contSize = GetWideStringLength(ControlsManager.m_aActionNames[cont]);
 				if (contSize != 0) {
 					if (WideStringCompare(&str[i], ControlsManager.m_aActionNames[cont], contSize)) {
-						done = true;
 						ControlsManager.GetWideStringOfCommandKeys(cont, keybuf, 256);
 						uint16 keybuf_size = GetWideStringLength(keybuf);
 						for (uint16 j = 0; j < keybuf_size; j++) {
@@ -754,7 +751,7 @@ CMessages::ClearThisPrint(wchar *str)
 				}
 				BriefMessages[i].m_pText = nil;
 				BriefMessages[0].m_nStartTime = CTimer::GetTimeInMilliseconds();
-				if (BriefMessages[0].m_pText != nil)
+				if (BriefMessages[0].m_pText == nil)
 					AddToPreviousBriefArray(
 						BriefMessages[0].m_pText,
 						BriefMessages[0].m_nNumber[0],

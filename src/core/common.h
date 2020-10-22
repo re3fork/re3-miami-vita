@@ -24,6 +24,11 @@
 #endif
 #endif
 
+#if defined __SWITCH__
+#include <switch.h>
+#include "switch_compat.h"
+#endif
+
 #include <rwcore.h>
 #include <rpworld.h>
 
@@ -270,7 +275,10 @@ void re3_usererror(const char *format, ...);
 
 #define PERCENT(x, p)                    ((float(x) * (float(p) / 100.0f)))
 #define ARRAY_SIZE(array)                (sizeof(array) / sizeof(array[0]))
+
+#ifndef BIT
 #define BIT(num)                         (1<<(num))
+#endif
 
 #define ABS(a)  (((a) < 0) ? (-(a)) : (a))
 #define norm(value, min, max) (((value) < (min)) ? 0 : (((value) > (max)) ? 1 : (((value) - (min)) / ((max) - (min)))))

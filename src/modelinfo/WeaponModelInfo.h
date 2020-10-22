@@ -1,7 +1,6 @@
 #pragma once
 
 #include "SimpleModelInfo.h"
-#include "WeaponType.h"
 
 class CWeaponModelInfo : public CSimpleModelInfo
 {
@@ -19,5 +18,5 @@ public:
 	
 	void Init(void);
 	void SetWeaponInfo(int32 weaponId);
-	eWeaponType GetWeaponInfo(void);
+	int32 GetWeaponInfo(void);
 };
