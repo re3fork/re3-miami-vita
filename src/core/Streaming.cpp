@@ -240,7 +240,7 @@ CStreaming::Init2(void)
 void
 CStreaming::Init(void)
 {
-#ifdef USE_TXD_CDIMAGE
+#if defined(USE_TXD_CDIMAGE) && !defined(PSP2)
 	if(!CanVideoCardDoDXT()){
 		int txdHandle = CFileMgr::OpenFile("MODELS\\TXD.IMG", "r");
 		if (txdHandle)

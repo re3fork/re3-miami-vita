@@ -79,8 +79,8 @@ struct
 int defaultProvider;
 
 
-char SampleBankDescFilename[] = "audio/sfx.SDT";
-char SampleBankDataFilename[] = "audio/sfx.RAW";
+char SampleBankDescFilename[] = "ux0:data/gta3/audio/sfx.SDT";
+char SampleBankDataFilename[] = "ux0:data/gta3/audio/sfx.RAW";
 
 FILE *fpSampleDescHandle;
 #ifdef AUDIO_OPUS
@@ -352,7 +352,7 @@ set_new_provider(int index)
 		
 		alDistanceModel(AL_INVERSE_DISTANCE_CLAMPED);
 		
-		#ifndef __SWITCH__ // crashes on switch
+		#if !defined(__SWITCH__) && !defined(PSP2)
 		if ( alcIsExtensionPresent(ALDevice, (ALCchar*)ALC_EXT_EFX_NAME) )
 		{
 			alGenAuxiliaryEffectSlots(1, &ALEffectSlot);
@@ -381,7 +381,7 @@ set_new_provider(int index)
 		usingEAX3 = 0;
 		_usingEFX = false;
 		
-		#ifndef __SWITCH__ // crashes on switch
+		#if !defined(__SWITCH__) && !defined(PSP2)
 		if ( !strcmp(&providers[index].name[strlen(providers[index].name) - strlen(" EAX3")], " EAX3") 
 				&& alcIsExtensionPresent(ALDevice, (ALCchar*)ALC_EXT_EFX_NAME) )
 		{
@@ -571,13 +571,13 @@ _ResolveLink(char const *path, char *out)
 	
 	return false;
 #else
-	struct stat sb;
+	/*struct stat sb;
 
 	if (lstat(path, &sb) == -1) {
 		perror("lstat: ");
 		return false;
-	}
-#ifndef __SWITCH__
+	}*/
+#if !defined(__SWITCH__) && !defined(PSP2)
 	if (S_ISLNK(sb.st_mode)) {
 		char* linkname = (char*)alloca(sb.st_size + 1);
 		if (linkname == NULL) {
@@ -1029,7 +1029,7 @@ cSampleManager::Initialise(void)
 		add_providers();
 
 #ifdef AUDIO_CACHE
-	FILE *cacheFile = fcaseopen("audio\\sound.cache", "rb");
+	FILE *cacheFile = fcaseopen("ux0:data/gta3/audio\\sound.cache", "rb");
 	if (cacheFile) {
 		fread(nStreamLength, sizeof(uint32), TOTAL_STREAMED_SOUNDS, cacheFile);
 		fclose(cacheFile);
@@ -1053,7 +1053,7 @@ cSampleManager::Initialise(void)
 				USERERROR("Can't open '%s'\n", StreamedNameTable[i]);
 		}
 #ifdef AUDIO_CACHE
-		cacheFile = fcaseopen("audio\\sound.cache", "wb");
+		cacheFile = fcaseopen("ux0:data/gta3/audio\\sound.cache", "wb");
 		fwrite(nStreamLength, sizeof(uint32), TOTAL_STREAMED_SOUNDS, cacheFile);
 		fclose(cacheFile);
 #endif

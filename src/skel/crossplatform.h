@@ -51,7 +51,7 @@ FILE *_fcaseopen(char const *filename, char const *mode);
 #ifdef RW_GL3
 typedef struct
 {
-    GLFWwindow* window;
+    //GLFWwindow* window;
     RwBool		fullScreen;
     RwV2d		lastMousePos;
     double      mouseWheel; // glfw doesn't cache it
@@ -83,13 +83,16 @@ enum eGameState
     GS_FRONTEND,
     GS_INIT_PLAYING_GAME,
     GS_PLAYING_GAME,
-#ifndef MASTER
+//#ifndef MASTER
     GS_ANIMVIEWER,
-#endif
+//#endif
 };
 extern RwUInt32 gGameState;
 
 RwBool IsForegroundApp();
+
+#undef _WIN32
+#define PATH_MAX 260
 
 #ifndef MAX_PATH
     #if !defined _WIN32 || defined __MINGW32__

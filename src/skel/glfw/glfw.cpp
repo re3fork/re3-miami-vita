@@ -41,6 +41,8 @@
 #include "AnimViewer.h"
 #include "Font.h"
 
+int _newlib_heap_size_user = 256 * 1024 * 1024;
+
 #define MAX_SUBSYSTEMS		(16)
 
 // --MIAMI: file done
@@ -82,7 +84,7 @@ DWORD _dwOperatingSystemVersion;
 #else
 long _dwOperatingSystemVersion;
 #ifndef __APPLE__
-#ifndef __SWITCH__ // missing in switch devkit
+#if !defined(__SWITCH__) && !defined(PSP2)
 #include <sys/sysinfo.h>
 #endif
 #else
@@ -119,13 +121,13 @@ void _psCreateFolder(const char *path)
 #else
 	struct stat info;
 	char fullpath[PATH_MAX];
-	realpath(path, fullpath);
+	//realpath(path, fullpath);
 
-	if (lstat(fullpath, &info) != 0) {
+	/*if (lstat(fullpath, &info) != 0) {
 		if (errno == ENOENT || (errno != EACCES && !S_ISDIR(info.st_mode))) {
 			mkdir(fullpath, 0755);
 		}
-	}
+	}*/
 #endif
 }
 
@@ -200,10 +202,9 @@ psCameraShowRaster(RwCamera *camera)
 #else
 	if (FrontEndMenuManager.m_PrefsFrameLimiter || FrontEndMenuManager.m_bMenuActive)
 #endif
-		RwCameraShowRaster(camera, PSGLOBAL(window), rwRASTERFLIPWAITVSYNC);
+		RwCameraShowRaster(camera, nullptr, rwRASTERFLIPWAITVSYNC);
 	else
-		RwCameraShowRaster(camera, PSGLOBAL(window), rwRASTERFLIPDONTWAIT);
-
+		RwCameraShowRaster(camera, nullptr, rwRASTERFLIPDONTWAIT);
 	return;
 }
 
@@ -222,6 +223,67 @@ psGrabScreen(RwCamera *pCamera)
 	}
 #endif
 	return nil;
+}
+
+unsigned char gButtons[GLFW_GAMEPAD_BUTTON_LAST+1];
+float gAxes[GLFW_GAMEPAD_AXIS_LAST+1];
+
+unsigned char* glfwGetJoystickButtons(int jid, int* count)
+{
+	SceCtrlData pad;
+	sceCtrlPeekBufferPositive(0, &pad, 1);
+	gButtons[GLFW_GAMEPAD_BUTTON_CROSS]        = pad.buttons & SCE_CTRL_CROSS    ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_CIRCLE]       = pad.buttons & SCE_CTRL_CIRCLE   ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_SQUARE]       = pad.buttons & SCE_CTRL_SQUARE   ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_TRIANGLE]     = pad.buttons & SCE_CTRL_TRIANGLE ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER]  = pad.buttons & SCE_CTRL_LTRIGGER ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] = pad.buttons & SCE_CTRL_RTRIGGER ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_BACK]         = pad.buttons & SCE_CTRL_SELECT   ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_START]        = pad.buttons & SCE_CTRL_START    ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_GUIDE]        = GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB]   = GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB]  = GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_DPAD_UP]      = pad.buttons & SCE_CTRL_UP       ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT]   = pad.buttons & SCE_CTRL_RIGHT    ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN]    = pad.buttons & SCE_CTRL_DOWN     ? GLFW_PRESS : GLFW_RELEASE;
+	gButtons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT]    = pad.buttons & SCE_CTRL_LEFT     ? GLFW_PRESS : GLFW_RELEASE;
+	if (count)
+		*count = GLFW_GAMEPAD_BUTTON_LAST+1;
+	return gButtons;
+}
+
+float* glfwGetJoystickAxes(int jid, int* count)
+{
+	SceCtrlData pad;
+	sceCtrlPeekBufferPositive(0, &pad, 1);
+	gAxes[GLFW_GAMEPAD_AXIS_LEFT_X]        = ((float)pad.lx - 128.0f) / 128.0f;
+	gAxes[GLFW_GAMEPAD_AXIS_LEFT_Y]        = ((float)pad.ly - 128.0f) / 128.0f;
+	gAxes[GLFW_GAMEPAD_AXIS_RIGHT_X]       = ((float)pad.rx - 128.0f) / 128.0f;
+	gAxes[GLFW_GAMEPAD_AXIS_RIGHT_Y]       = ((float)pad.ry - 128.0f) / 128.0f;
+	gAxes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER]  = 0.0f;
+	gAxes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] = 0.0f;
+	if (count)
+		*count = GLFW_GAMEPAD_AXIS_LAST+1;
+	return gAxes;
+}
+
+int glfwGetGamepadState(int jid, GLFWgamepadstate* state)
+{
+	unsigned char *buttons = glfwGetJoystickButtons(jid, NULL);
+	float *axes = glfwGetJoystickAxes(jid, NULL);
+	memcpy(state->buttons, buttons, sizeof(state->buttons));
+	memcpy(state->axes, axes, sizeof(state->axes));
+	return 1;
+}
+
+int glfwJoystickPresent(int jid)
+{
+	return 1;
+}
+
+int glfwJoystickIsGamepad(int jid)
+{
+	return 1;
 }
 
 /*
@@ -251,11 +313,11 @@ double
 psTimer(void)
 {
 	struct timespec start; 
-#ifdef __linux__
+/*#ifdef __linux__
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 #else
 	clock_gettime(CLOCK_MONOTONIC, &start);
-#endif
+#endif*/
 	return start.tv_sec * 1000.0 + start.tv_nsec/1000000.0;
 }
 #endif       
@@ -267,7 +329,7 @@ psTimer(void)
 void
 psMouseSetPos(RwV2d *pos)
 {
-	glfwSetCursorPos(PSGLOBAL(window), pos->x, pos->y);
+	//glfwSetCursorPos(PSGLOBAL(window), pos->x, pos->y);
 	
 	PSGLOBAL(lastMousePos.x) = (RwInt32)pos->x;
 
@@ -465,7 +527,7 @@ psInitialize(void)
 	debug("Available physical memory %llu\n", size);
 #else
 #ifndef __APPLE__
-#ifndef __SWITCH__
+#if !defined(__SWITCH__) && !defined(PSP2)
  	struct sysinfo systemInfo;
 	sysinfo(&systemInfo);
 	_dwMemAvailPhys = systemInfo.freeram;
@@ -473,8 +535,8 @@ psInitialize(void)
 	debug("Available physical memory %u\n", systemInfo.freeram);
 #else
 	size_t total_mem_available, total_mem_usage;
-	svcGetInfo(&total_mem_available, 6, 0xffff8001, 0);
-	svcGetInfo(&total_mem_usage,     7, 0xffff8001, 0);
+	//svcGetInfo(&total_mem_available, 6, 0xffff8001, 0);
+	//svcGetInfo(&total_mem_usage,     7, 0xffff8001, 0);
 
 	debug("Total available memory %u\n", total_mem_available);
 	debug("Total memory usage %u\n", total_mem_usage);
@@ -752,25 +814,13 @@ psSelectDevice()
 		   FrontEndMenuManager.m_nPrefsHeight == 0 ||
 		   FrontEndMenuManager.m_nPrefsDepth == 0){
 			// Defaults if nothing specified
-			#ifndef __SWITCH__
+			#if !defined(__SWITCH__) && !defined(PSP2)
 			const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 			FrontEndMenuManager.m_nPrefsWidth = mode->width;
 			FrontEndMenuManager.m_nPrefsHeight = mode->height;
 			#else
-			switch(appletGetOperationMode()){
-				default:
-				case AppletOperationMode_Handheld: {
-					FrontEndMenuManager.m_nPrefsWidth = 1280;
-					FrontEndMenuManager.m_nPrefsHeight = 720;
-					break;
-				}
-
-				case AppletOperationMode_Docked: {
-					FrontEndMenuManager.m_nPrefsWidth = 1920;
-					FrontEndMenuManager.m_nPrefsHeight = 1080;
-					break;
-				}
-			}
+			FrontEndMenuManager.m_nPrefsWidth = 960;
+			FrontEndMenuManager.m_nPrefsHeight = 544;
 			#endif
 			FrontEndMenuManager.m_nPrefsDepth = 32;
 			FrontEndMenuManager.m_nPrefsWindowed = 0;
@@ -871,35 +921,35 @@ psSelectDevice()
 	return TRUE;
 }
 
-void keypressCB(GLFWwindow* window, int key, int scancode, int action, int mods);
+/*void keypressCB(GLFWwindow* window, int key, int scancode, int action, int mods);
 void resizeCB(GLFWwindow* window, int width, int height);
 void scrollCB(GLFWwindow* window, double xoffset, double yoffset);
 void cursorCB(GLFWwindow* window, double xpos, double ypos);
 void cursorEnterCB(GLFWwindow* window, int entered);
-void joysChangeCB(int jid, int event);
+void joysChangeCB(int jid, int event);*/
 
 bool IsThisJoystickBlacklisted(int i)
 {
 #ifndef DONT_TRUST_RECOGNIZED_JOYSTICKS
 	return false;
 #else
-	if (glfwJoystickIsGamepad(i))
-		return false;
+	//if (glfwJoystickIsGamepad(i))
+	//	return false;
 
-	const char* joyname = glfwGetJoystickName(i);
+	//const char* joyname = glfwGetJoystickName(i);
 
-	if (gSelectedJoystickName[0] != '\0' &&
+	/*if (gSelectedJoystickName[0] != '\0' &&
 		strncmp(joyname, gSelectedJoystickName, strlen(gSelectedJoystickName)) == 0)
-		return false;
+		return false;*/
 
-	return true;
+	return false;
 #endif
 }
 
 void _InputInitialiseJoys()
 {
-	PSGLOBAL(joy1id) = -1;
-	PSGLOBAL(joy2id) = -1;
+	PSGLOBAL(joy1id) = 0;
+	/*PSGLOBAL(joy2id) = -1;
 
 	for (int i = 0; i <= GLFW_JOYSTICK_LAST; i++) {
 		if (glfwJoystickPresent(i) && !IsThisJoystickBlacklisted(i)) {
@@ -910,21 +960,18 @@ void _InputInitialiseJoys()
 			else
 				break;
 		}
-	}
+	}*/
 
 	if (PSGLOBAL(joy1id) != -1) {
 		int count;
 		glfwGetJoystickButtons(PSGLOBAL(joy1id), &count);
-#ifdef DONT_TRUST_RECOGNIZED_JOYSTICKS
-		strcpy(gSelectedJoystickName, glfwGetJoystickName(PSGLOBAL(joy1id)));
-#endif
 		ControlsManager.InitDefaultControlConfigJoyPad(count);
 	}
 }
 
 long _InputInitialiseMouse(bool exclusive)
 {
-	glfwSetInputMode(PSGLOBAL(window), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+	//glfwSetInputMode(PSGLOBAL(window), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 	return 0;
 }
 
@@ -944,20 +991,20 @@ void psPostRWinit(void)
 	RwVideoMode vm;
 	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
 
-	#ifndef __SWITCH__
+	/*#if !defined(__SWITCH__)  && !defined(PSP2)
 	glfwSetKeyCallback(PSGLOBAL(window), keypressCB);
 	#endif
 	glfwSetWindowSizeCallback(PSGLOBAL(window), resizeCB);
 	glfwSetScrollCallback(PSGLOBAL(window), scrollCB);
 	glfwSetCursorPosCallback(PSGLOBAL(window), cursorCB);
 	glfwSetCursorEnterCallback(PSGLOBAL(window), cursorEnterCB);
-	glfwSetJoystickCallback(joysChangeCB);
+	glfwSetJoystickCallback(joysChangeCB);*/
 
 	_InputInitialiseJoys();
 	_InputInitialiseMouse(false);
 
-	if(!(vm.flags & rwVIDEOMODEEXCLUSIVE))
-		glfwSetWindowSize(PSGLOBAL(window), RsGlobal.maximumWidth, RsGlobal.maximumHeight);
+	//if(!(vm.flags & rwVIDEOMODEEXCLUSIVE))
+	//	glfwSetWindowSize(PSGLOBAL(window), RsGlobal.maximumWidth, RsGlobal.maximumHeight);
 
 	// Make sure all keys are released
 	CPad::GetPad(0)->Clear(true);
@@ -1257,23 +1304,23 @@ void HandleExit()
 }
 
 #ifndef _WIN32
-void terminateHandler(int sig, siginfo_t *info, void *ucontext) {
+/*void terminateHandler(int sig, siginfo_t *info, void *ucontext) {
 	RsGlobal.quit = TRUE;
-}
+}*/
 
-void dummyHandler(int sig){
+//void dummyHandler(int sig){
 	// Don't kill the app pls
-}
+//}
 
 #endif
 
-void resizeCB(GLFWwindow* window, int width, int height) {
+/*void resizeCB(GLFWwindow* window, int width, int height) {
 	/*
 	* Handle event to ensure window contents are displayed during re-size
 	* as this can be disabled by the user, then if there is not enough
 	* memory things don't work.
 	*/
-	/* redraw window */
+	/* redraw window
 #ifndef MASTER
 	if (RwInitialised && (gGameState == GS_PLAYING_GAME || gGameState == GS_ANIMVIEWER))
 	{
@@ -1301,18 +1348,18 @@ void resizeCB(GLFWwindow* window, int width, int height) {
 		RsEventHandler(rsCAMERASIZE, &r);
 	}
 //	glfwSetWindowPos(window, 0, 0);
-}
+}*/
 
-void scrollCB(GLFWwindow* window, double xoffset, double yoffset) {
+/*void scrollCB(GLFWwindow* window, double xoffset, double yoffset) {
 	PSGLOBAL(mouseWheel) = yoffset;
 }
 
-int keymap[GLFW_KEY_LAST + 1];
+int keymap[GLFW_KEY_LAST + 1];*/
 
 static void
 initkeymap(void)
 {
-	int i;
+	/*int i;
 	for (i = 0; i < GLFW_KEY_LAST + 1; i++)
 		keymap[i] = rsNULL;
 
@@ -1434,13 +1481,13 @@ initkeymap(void)
 	keymap[GLFW_KEY_RIGHT_CONTROL] = rsRCTRL;
 	keymap[GLFW_KEY_RIGHT_ALT] = rsRALT;
 	keymap[GLFW_KEY_RIGHT_SUPER] = rsRWIN;
-	keymap[GLFW_KEY_MENU] = rsNULL;
+	keymap[GLFW_KEY_MENU] = rsNULL;*/
 }
 
 bool lshiftStatus = false;
 bool rshiftStatus = false;
 
-void
+/*void
 keypressCB(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (key >= 0 && key <= GLFW_KEY_LAST) {
@@ -1456,7 +1503,7 @@ keypressCB(GLFWwindow* window, int key, int scancode, int action, int mods)
 		else if (action == GLFW_PRESS) RsKeyboardEventHandler(rsKEYDOWN, &ks);
 		else if (action == GLFW_REPEAT) RsKeyboardEventHandler(rsKEYDOWN, &ks);
 	}
-}
+}*/
 
 // R* calls that in ControllerConfig, idk why
 void
@@ -1466,7 +1513,7 @@ _InputTranslateShiftKeyUpDown(RsKeyCodes *rs) {
 }
 
 // TODO this only works in frontend(and luckily only frontend use this). Fun fact: if I get pos manually in game, glfw reports that it's > 32000
-void
+/*void
 cursorCB(GLFWwindow* window, double xpos, double ypos) {
 	FrontEndMenuManager.m_nMouseTempPosX = xpos;
 	FrontEndMenuManager.m_nMouseTempPosY = ypos;
@@ -1475,7 +1522,7 @@ cursorCB(GLFWwindow* window, double xpos, double ypos) {
 void
 cursorEnterCB(GLFWwindow* window, int entered) {
 	PSGLOBAL(cursorIsInWindow) = !!entered;
-}
+}*/
 
 /*
  *****************************************************************************
@@ -1504,6 +1551,11 @@ WinMain(HINSTANCE instance,
 int
 main(int argc, char *argv[])
 {
+	sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG);
+	scePowerSetArmClockFrequency(444);
+	scePowerSetBusClockFrequency(222);
+	scePowerSetGpuClockFrequency(222);
+	scePowerSetGpuXbarClockFrequency(166);
 #endif
 #ifdef __SWITCH__
 	#if DEBUG
@@ -1515,7 +1567,7 @@ main(int argc, char *argv[])
 	RwV2d pos;
 	RwInt32 i;
 
-#if !defined(_WIN32) && !defined(__SWITCH__)
+#if !defined(_WIN32) && !defined(__SWITCH__) && !defined(PSP2)
 	struct sigaction act;
 	act.sa_sigaction = terminateHandler;
 	act.sa_flags = SA_SIGINFO;
@@ -1566,7 +1618,7 @@ main(int argc, char *argv[])
 	openParams.width = RsGlobal.maximumWidth;
 	openParams.height = RsGlobal.maximumHeight;
 	openParams.windowtitle = RsGlobal.appName;
-	openParams.window = &PSGLOBAL(window);
+	//openParams.window = &PSGLOBAL(window);
 	
 	ControlsManager.MakeControllerActionsBlank();
 	ControlsManager.InitDefaultControlConfiguration();
@@ -1700,13 +1752,13 @@ main(int argc, char *argv[])
 		
 		while( !RsGlobal.quit && !(FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad) && !glfwWindowShouldClose(PSGLOBAL(window)) )
 #else
-		while( !RsGlobal.quit && !FrontEndMenuManager.m_bWantToRestart && !glfwWindowShouldClose(PSGLOBAL(window)))
+		while( !RsGlobal.quit && !FrontEndMenuManager.m_bWantToRestart /*&& !glfwWindowShouldClose(PSGLOBAL(window))*/)
 #endif
 		{
 			#ifdef __SWITCH__
 			if(!appletMainLoop()) RsGlobal.quit = true;
 			#endif
-			glfwPollEvents();
+			//glfwPollEvents();
 			if( ForegroundApp )
 			{
 				switch ( gGameState )
@@ -1716,7 +1768,7 @@ main(int argc, char *argv[])
 #ifdef NO_MOVIES
 						gGameState = GS_INIT_ONCE;
 #else
-						gGameState = GS_INIT_LOGO_MPEG;
+						gGameState = GS_INIT_ONCE;
 #endif
 						TRACE("gGameState = GS_INIT_ONCE");
 						break;
@@ -1839,8 +1891,8 @@ main(int argc, char *argv[])
 					
 					case GS_FRONTEND:
 					{
-						if(!glfwGetWindowAttrib(PSGLOBAL(window), GLFW_ICONIFIED))
-							RsEventHandler(rsFRONTENDIDLE, nil);
+						//if(!glfwGetWindowAttrib(PSGLOBAL(window), GLFW_ICONIFIED))
+						//	RsEventHandler(rsFRONTENDIDLE, nil);
 
 #ifdef PS2_MENU
 						if ( !FrontEndMenuManager.m_bMenuActive || TheMemoryCard.m_bWantToLoad )
@@ -2157,7 +2209,7 @@ void CapturePad(RwInt32 padID)
 	return;
 }
 
-void joysChangeCB(int jid, int event)
+/*void joysChangeCB(int jid, int event)
 {
 	if (event == GLFW_CONNECTED && !IsThisJoystickBlacklisted(jid)) {
 		if (PSGLOBAL(joy1id) == -1) {
@@ -2174,7 +2226,7 @@ void joysChangeCB(int jid, int event)
 		} else if (PSGLOBAL(joy2id) == jid)
 			PSGLOBAL(joy2id) = -1;
 	}
-}
+}*/
 
 #if (defined(_MSC_VER))
 int strcasecmp(const char* str1, const char* str2)

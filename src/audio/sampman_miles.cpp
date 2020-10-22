@@ -990,7 +990,7 @@ cSampleManager::Initialise(void)
 	
 #ifdef AUDIO_CACHE
 	TRACE("cache");
-	FILE *cacheFile = fcaseopen("audio\\sound.cache", "rb");
+	FILE *cacheFile = fcaseopen("ux0:data/gta3/audio\\sound.cache", "rb");
 	bool CreateCache = false;
 	if (cacheFile) {
 		fread(nStreamLength, sizeof(uint32), TOTAL_STREAMED_SOUNDS, cacheFile);
@@ -1195,7 +1195,7 @@ cSampleManager::Initialise(void)
 
 #ifdef AUDIO_CACHE
 	if (CreateCache) {
-		cacheFile = fcaseopen("audio\\sound.cache", "wb");
+		cacheFile = fcaseopen("ux0:data/gta3/audio\\sound.cache", "wb");
 		fwrite(nStreamLength, sizeof(uint32), TOTAL_STREAMED_SOUNDS, cacheFile);
 		fclose(cacheFile);
 	}

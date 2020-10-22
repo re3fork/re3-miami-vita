@@ -481,7 +481,7 @@ CMenuManager::CentreMousePointer()
 		ClientToScreen(PSGLOBAL(window), &Point);
 		SetCursorPos(Point.x, Point.y);
 #elif defined RW_GL3
-		glfwSetCursorPos(PSGLOBAL(window), SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+		//glfwSetCursorPos(PSGLOBAL(window), SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 #endif
 
 		PSGLOBAL(lastMousePos.x) = SCREEN_WIDTH / 2;
@@ -3781,11 +3781,11 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 #ifdef USE_DEBUG_SCRIPT_LOADER
 	if (m_nCurrScreen == MENUPAGE_START_MENU || m_nCurrScreen == MENUPAGE_NEW_GAME || m_nCurrScreen == MENUPAGE_NEW_GAME_RELOAD) {
 #ifdef RW_GL3
-		if (glfwGetKey(PSGLOBAL(window), GLFW_KEY_R) == GLFW_PRESS) {
+		/*if (glfwGetKey(PSGLOBAL(window), GLFW_KEY_R) == GLFW_PRESS) {
 			scriptToLoad = 1;
 			DoSettingsBeforeStartingAGame();
 			return;
-		}
+		}*/
 #elif defined _WIN32
 		if (GetAsyncKeyState('R') & 0x8000) {
 			scriptToLoad = 1;

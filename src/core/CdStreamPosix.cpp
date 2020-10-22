@@ -1,3 +1,5 @@
+#define PATH_MAX 512
+
 #ifndef _WIN32
 #include "common.h"
 #include "crossplatform.h"
@@ -7,12 +9,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <sys/statvfs.h>
+//#include <sys/statvfs.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/resource.h>
-#ifndef __SWITCH__
+#if !defined(__SWITCH__) && !defined(PSP2)
 #include <sys/syscall.h>
 #else
 // no signals in switch
@@ -27,6 +29,7 @@
 #define CDTRACE(f, ...)   printf("%s: " f "\n", "cdvd_stream", ## __VA_ARGS__)
 
 // #define ONE_THREAD_PER_CHANNEL // Don't use if you're not on SSD/Flash. (Also you may want to benefit from this via using all channels in Streaming.cpp)
+#define ONE_THREAD_PER_CHANNEL
 
 bool flushStream[MAX_CDCHANNELS];
 
@@ -81,7 +84,7 @@ CdStreamInitThread(void)
 	gChannelRequestQ.tail = 0;
 	gChannelRequestQ.size = gNumChannels + 1;
 	ASSERT(gChannelRequestQ.items != nil );
-#ifndef __SWITCH__
+#if !defined(__SWITCH__) && !defined(PSP2)
 	gCdStreamSema = sem_open("/semaphore_cd_stream", O_CREAT, 0644, 1);
 
 
@@ -102,7 +105,7 @@ CdStreamInitThread(void)
 	{
 		for ( int32 i = 0; i < gNumChannels; i++ )
 		{
-#ifndef __SWITCH__
+#if !defined(__SWITCH__) && !defined(PSP2)
 			sprintf(semName,"/semaphore_done%d",i);
 			gpReadInfo[i].pDoneSemaphore = sem_open(semName, O_CREAT, 0644, 1);
 
@@ -119,7 +122,7 @@ CdStreamInitThread(void)
 				return;
 			}
 #ifdef ONE_THREAD_PER_CHANNEL
-#ifndef __SWITCH__
+#if !defined(__SWITCH__) && !defined(PSP2)
 			sprintf(semName,"/semaphore_start%d",i);
 			gpReadInfo[i].pStartSemaphore = sem_open(semName, O_CREAT, 0644, 1);
 
@@ -170,14 +173,14 @@ CdStreamInitThread(void)
 void
 CdStreamInit(int32 numChannels)
 {
-	struct statvfs fsInfo;
+	/*struct statvfs fsInfo;
 
 	if((statvfs("models/gta3.img", &fsInfo)) < 0)
 	{
 		CDTRACE("can't get filesystem info");
 		ASSERT(0);
 		return;
-	}
+	}*/
 #ifdef __linux__
 	_gdwCdStreamFlags = O_RDONLY | O_NOATIME;
 #else
@@ -191,7 +194,7 @@ CdStreamInit(int32 numChannels)
 		debug("Using no buffered loading for streaming\n");
 	}
 */
-	void *pBuffer = (void *)RwMallocAlign(CDSTREAM_SECTOR_SIZE, (RwUInt32)fsInfo.f_bsize);
+	void *pBuffer = (void *)RwMallocAlign(CDSTREAM_SECTOR_SIZE, /*fsInfo.f_bsize*/CDSTREAM_SECTOR_SIZE);
 	ASSERT( pBuffer != nil );
 
 	gNumImages = 0;
@@ -216,13 +219,15 @@ GetGTA3ImgSize(void)
 	struct stat statbuf;
 
 	char path[PATH_MAX];
-	realpath(gImgNames[0], path);
+	//realpath(gImgNames[0], path);
+	strcpy(path, gImgNames[0]);
 	if (stat(path, &statbuf) == -1) {
 		// Try case-insensitivity
 		char* real = casepath(gImgNames[0], false);
 		if (real)
 		{
-			realpath(real, path);
+			//realpath(real, path);
+			strcpy(path, real);
 			free(real);
 			if (stat(path, &statbuf) != -1)
 				goto ok;
